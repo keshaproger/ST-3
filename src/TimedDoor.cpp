@@ -26,8 +26,7 @@ TimedDoor::~TimedDoor() {
 
 void TimedDoor::unlock() {
     isOpened = true;
-    Timer timer;
-    timer.tregister(iTimeout, adapter);
+    timer->tregister(iTimeout, adapter);
 }
 
 void TimedDoor::lock() {
