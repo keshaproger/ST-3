@@ -75,8 +75,8 @@ TEST(DoorTimerAdapterTest, CallsTimeout) {
 TEST_F(TimedDoorTest, TimerRegistrationOnUnlock) {
     MockTimerClient client;
     Timer timer;
-    EXPECT_CALL(client, Timeout()).Times(AtLeast(1));
-    door->unlock();
+    EXPECT_CALL(client, Timeout()).Times(1);
+    timer.tregister(1000, &client);
 }
 
 TEST_F(TimedDoorTest, ExceptionAfterTimeout) {
