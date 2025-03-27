@@ -20,9 +20,11 @@ bool TimedDoor::isDoorOpened() {
 }
 
 void TimedDoor::unlock() {
-    isOpened = true;
-    Timer timer;
-    timer.tregister(iTimeout, adapter);
+    if (!isOpened) {
+        isOpened = true;
+        Timer timer;
+        timer.tregister(iTimeout, adapter);
+    }
 }
 
 void TimedDoor::lock() {
