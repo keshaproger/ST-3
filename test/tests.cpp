@@ -76,14 +76,12 @@ TEST_F(TimedDoorTest, NoThrowWhenClosed) {
 
 // Тесты для адаптера
 TEST_F(AdapterTest, TimeoutTriggersWhenOpen) {
-    EXPECT_CALL(mockDoor, isDoorOpened())
-        .WillOnce(::testing::Return(true));
+    realDoor.unlock();
     EXPECT_THROW(adapter.Timeout(), std::runtime_error);
 }
 
 TEST_F(AdapterTest, NoActionWhenClosed) {
-    EXPECT_CALL(mockDoor, isDoorOpened())
-        .WillOnce(::testing::Return(false));
+    realDoor.lock();
     EXPECT_NO_THROW(adapter.Timeout());
 }
 
