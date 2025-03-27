@@ -36,9 +36,10 @@ int TimedDoor::getTimeOut() const {
 }
 
 void TimedDoor::throwState() {
-    throw std::runtime_error("Door opened too long!");
+    if (isOpened) {
+        throw std::runtime_error("Door opened too long!");
+    }
 }
-
 void Timer::tregister(int timeout, TimerClient* client) {
     this->client = client;
     sleep(timeout);
