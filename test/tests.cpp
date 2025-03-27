@@ -53,7 +53,7 @@ TEST_F(TimedDoorTest, LockClosesDoor) {
 
 TEST_F(TimedDoorTest, TimeoutThrowsWhenOpen) {
     door->unlock();
-    door->adapter->Timeout();
+    door->triggerTimeout();
     EXPECT_THROW(door->throwState(), std::runtime_error);
 }
 
@@ -70,9 +70,8 @@ TEST(TimerTest, RegistersClient) {
 
 TEST(DoorTimerAdapterTest, CallsTimeout) {
     TimedDoor door(1000);
-    DoorTimerAdapter adapter(door);
     door.unlock();
-    EXPECT_THROW(adapter.Timeout(), std::runtime_error);
+    EXPECT_THROW(door.triggerTimeout(), std::runtime_error);
 }
 
 TEST_F(TimedDoorTest, TimerRegistrationOnUnlock) {
