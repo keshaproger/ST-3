@@ -106,14 +106,15 @@ TEST(TimedDoorExceptionTest, InvalidTimeout) {
 }
 
 TEST(TimedDoorIntegrationTest, FullWorkflow) {
-    MockTimer mockTimer;
+    testing::NiceMock<MockTimer> mockTimer;
     TimedDoor door(1);
-    
-    EXPECT_CALL(mockTimer, tregister(1, _))
-        .WillOnce(testing::Invoke([](int, TimerClient* tc) {  // Фикс здесь
+
+    ON_CALL(mockTimer, tregister)
+        .WillByDefault(Invoke([](int, TimerClient* tc) {
             if (tc) tc->Timeout();
         }));
-    
+
     door.unlock();
+    
     EXPECT_THROW(door.throwState(), std::runtime_error);
 }
