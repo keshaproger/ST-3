@@ -53,3 +53,9 @@ void Timer::sleep(int ms) {
 void TimedDoor::triggerTimeout() {
     adapter->Timeout();
 }
+
+void TimedDoor::simulateTimeout() {
+    if (adapter) {
+        adapter->Timeout();
+    }
+}
