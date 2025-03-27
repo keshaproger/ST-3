@@ -10,7 +10,7 @@
 
 using ::testing::_;
 using ::testing::AtLeast;
-using ::testing::Throw;
+using ::testing::Invoke;
 
 // Mocks for testing
 class MockTimerClient : public TimerClient {
@@ -91,7 +91,7 @@ TEST(TimerTest, RegisterTimeout) {
     MockTimer timer;
     
     EXPECT_CALL(timer, tregister(5, &client))
-        .WillOnce(Invoke([](int, TimerClient* tc) {
+        .WillOnce(testing::Invoke([](int, TimerClient* tc) {  // Явное указание пространства имён
             if (tc) tc->Timeout();
         }));
     EXPECT_CALL(client, Timeout()).Times(1);
@@ -110,7 +110,7 @@ TEST(TimedDoorIntegrationTest, FullWorkflow) {
     TimedDoor door(1);
     
     EXPECT_CALL(mockTimer, tregister(1, _))
-        .WillOnce(Invoke([](int, TimerClient* tc) {
+        .WillOnce(testing::Invoke([](int, TimerClient* tc) {  // Фикс здесь
             if (tc) tc->Timeout();
         }));
     
