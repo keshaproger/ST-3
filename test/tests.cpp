@@ -1,7 +1,11 @@
 // Copyright 2021 GHA Test Team
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <chrono>
+#include <cstdint>
+#include <stdexcept>
+#include <thread>
 #include "TimedDoor.h"
 
 using ::testing::_;
