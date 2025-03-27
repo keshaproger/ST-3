@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <chrono>
 
-// DoorTimerAdapter
 DoorTimerAdapter::DoorTimerAdapter(TimedDoor& door) : door(door) {}
 
 void DoorTimerAdapter::Timeout() {
@@ -13,9 +12,14 @@ void DoorTimerAdapter::Timeout() {
     }
 }
 
-// TimedDoor
-TimedDoor::TimedDoor(int timeout) : iTimeout(timeout), isOpened(false) {
+TimedDoor::TimedDoor(int timeout, Timer* extTimer) 
+    : iTimeout(timeout), isOpened(false), timer(extTimer ? extTimer : new Timer()) {
     adapter = new DoorTimerAdapter(*this);
+}
+
+TimedDoor::~TimedDoor() {
+    delete adapter;
+    if (!dynamic_cast<Timer*>(timer)) delete timer;
 }
 
 bool TimedDoor::isDoorOpened() {
@@ -24,8 +28,7 @@ bool TimedDoor::isDoorOpened() {
 
 void TimedDoor::unlock() {
     isOpened = true;
-    Timer timer;
-    timer.tregister(iTimeout, adapter);
+    timer->tregister(iTimeout, adapter);
 }
 
 void TimedDoor::lock() {
@@ -42,10 +45,8 @@ void TimedDoor::throwState() {
     }
 }
 
-// Timer
 void Timer::tregister(int timeout, TimerClient* client) {
-    this->client = client;
-    std::thread([client, timeout]() {  // Захват client по значению
+    std::thread([client, timeout]() {
         std::this_thread::sleep_for(std::chrono::seconds(timeout));
         client->Timeout();
     }).detach();
