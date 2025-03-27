@@ -41,6 +41,7 @@ class TimedDoor : public Door {
   int  getTimeOut() const;
   void throwState();
   void triggerTimeout();
+  void simulateTimeout();
 };
 
 class Timer {
