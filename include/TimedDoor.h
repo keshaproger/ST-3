@@ -25,6 +25,8 @@ class Door {
 class DoorTimerAdapter : public TimerClient {
  private:
   TimedDoor& door;
+  // Добавлен friend-класс для тестов
+  friend class TimedDoorTest_AdapterBoundToCorrectDoor_Test;
  public:
   explicit DoorTimerAdapter(TimedDoor&);
   void Timeout() override;
@@ -36,6 +38,13 @@ class TimedDoor : public Door {
   Timer* timer;
   int iTimeout;
   bool isOpened;
+  // Добавлен friend-класс для тестов
+  friend class TimedDoorTest_UnlockStartsTimer_Test;
+  friend class TimedDoorTest_TimeoutThrowsIfDoorOpen_Test;
+  friend class TimedDoorTest_NoExceptionIfDoorClosed_Test;
+  friend class TimedDoorTest_ReopenResetsTimer_Test;
+  friend class TimedDoorTest_AdapterBoundToCorrectDoor_Test;
+  friend class TimedDoorTest_TimerReceivesCorrectTimeout_Test;
  public:
   explicit TimedDoor(int timeout, Timer* extTimer = nullptr);
   ~TimedDoor();
