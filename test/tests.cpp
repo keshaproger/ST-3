@@ -9,19 +9,19 @@ using ::testing::AtLeast;
 using ::testing::Throw;
 
 class MockTimerClient : public TimerClient {
-public:
+ public:
     MOCK_METHOD(void, Timeout, (), (override));
 };
 
 class MockDoor : public Door {
-public:
+ public:
     MOCK_METHOD(void, lock, (), (override));
     MOCK_METHOD(void, unlock, (), (override));
     MOCK_METHOD(bool, isDoorOpened, (), (override));
 };
 
 class TimedDoorTest : public ::testing::Test {
-protected:
+ protected:
     TimedDoor* door;
     int timeout = 1000;
 
@@ -82,11 +82,7 @@ TEST_F(TimedDoorTest, TimerRegistrationOnUnlock) {
 TEST_F(TimedDoorTest, ExceptionAfterTimeout) {
     testing::FLAGS_gtest_death_test_style = "threadsafe";
     door->unlock();
-    ASSERT_EXIT(
-        door->throwState(),
-        ::testing::KilledBySignal(SIGABRT),
-        "Door opened too long!"
-    );
+    ASSERT_EXIT(door->throwState(), ::testing::KilledBySignal(SIGABRT), "Door opened too long!" );
 }
 
 TEST(MockDoorTest, VerifyLockUnlock) {
