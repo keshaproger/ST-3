@@ -49,3 +49,7 @@ void Timer::tregister(int timeout, TimerClient* client) {
 void Timer::sleep(int ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
+
+void TimedDoor::triggerTimeout() {
+    adapter->Timeout();
+}
