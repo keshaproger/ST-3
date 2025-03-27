@@ -1,9 +1,12 @@
 // Copyright 2021 GHA Test Team
 #include "TimedDoor.h"
+#include <chrono>
 #include <stdexcept>
 #include <thread>
+#include <memory>
 
-DoorTimerAdapter::DoorTimerAdapter(TimedDoor& d) : door(d) {}
+// DoorTimerAdapter implementation
+DoorTimerAdapter::DoorTimerAdapter(TimedDoor& timedDoor) : door(timedDoor) {}
 
 void DoorTimerAdapter::Timeout() {
     if (door.isDoorOpened()) {
@@ -11,51 +14,38 @@ void DoorTimerAdapter::Timeout() {
     }
 }
 
+// TimedDoor implementation
 TimedDoor::TimedDoor(int timeout) : iTimeout(timeout), isOpened(false) {
+    if(timeout <= 0) throw std::invalid_argument("Timeout must be positive");
     adapter = new DoorTimerAdapter(*this);
 }
 
-bool TimedDoor::isDoorOpened() {
-    return isOpened;
+TimedDoor::~TimedDoor() {
+    delete adapter;
 }
 
 void TimedDoor::unlock() {
-    if (!isOpened) {
-        isOpened = true;
-        Timer timer;
-        timer.tregister(iTimeout, adapter);
-    }
+    isOpened = true;
+    Timer timer;
+    timer.tregister(iTimeout, adapter);
 }
 
 void TimedDoor::lock() {
     isOpened = false;
 }
 
-int TimedDoor::getTimeOut() const {
-    return iTimeout;
+bool TimedDoor::isDoorOpened() {
+    return isOpened;
 }
 
 void TimedDoor::throwState() {
-    if (isOpened) {
-        throw std::runtime_error("Door opened too long!");
-    }
-}
-void Timer::tregister(int timeout, TimerClient* client) {
-    this->client = client;
-    sleep(timeout);
-    client->Timeout();
+    if(isOpened) throw std::runtime_error("Door open timeout exceeded");
 }
 
-void Timer::sleep(int ms) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-}
-
-void TimedDoor::triggerTimeout() {
-    adapter->Timeout();
-}
-
-void TimedDoor::simulateTimeout() {
-    if (adapter) {
-        adapter->Timeout();
-    }
+// Timer implementation
+void Timer::tregister(int seconds, TimerClient* client) {
+    std::thread([seconds, client]() {
+        if(seconds > 0) std::this_thread::sleep_for(std::chrono::seconds(seconds));
+        if(client) client->Timeout();
+    }).detach();
 }
