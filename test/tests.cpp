@@ -3,43 +3,47 @@
 #include <gmock/gmock.h>
 #include "TimedDoor.h"
 
-using ::testing::AtLeast;
-using ::testing::Throw;
+using ::testing::StrictMock;
+using ::testing::Exactly;
 
-class MockTimerClient : public TimerClient {
+class MockTimer : public Timer {
  public:
-    MOCK_METHOD(void, Timeout, (), (override));
-};
-
-class MockDoor : public Door {
- public:
-    MOCK_METHOD(void, lock, (), (override));
-    MOCK_METHOD(void, unlock, (), (override));
-    MOCK_METHOD(bool, isDoorOpened, (), (override));
+    MOCK_METHOD(void, tregister, (int, TimerClient*), (override));
 };
 
 TEST(TimedDoorTest, UnlockStartsTimer) {
-    TimedDoor door(5);
-    testing::NiceMock<MockTimerClient> client;
-    EXPECT_CALL(client, Timeout()).Times(1);
+    StrictMock<MockTimer> mockTimer;
+    TimedDoor door(5, &mockTimer);
+    
+    EXPECT_CALL(mockTimer, tregister(5, door.adapter))
+        .Times(Exactly(1));
+    
     door.unlock();
-    std::this_thread::sleep_for(std::chrono::seconds(6));
 }
 
 TEST(TimedDoorTest, TimeoutThrowsIfDoorOpen) {
     TimedDoor door(2);
     door.unlock();
-    EXPECT_THROW({
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-    }, std::runtime_error);
+    
+    EXPECT_THROW(door.adapter->Timeout(), std::runtime_error);
 }
 
 TEST(TimedDoorTest, NoExceptionIfDoorClosed) {
     TimedDoor door(2);
     door.unlock();
     door.lock();
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-    SUCCEED();
+    
+    EXPECT_NO_THROW(door.adapter->Timeout());
 }
 
-// Дополнительные тесты (всего 10+)...
+TEST(TimedDoorTest, LockClosesDoor) {
+    TimedDoor door(5);
+    door.unlock();
+    door.lock();
+    EXPECT_FALSE(door.isDoorOpened());
+}
+
+TEST(TimedDoorTest, GetTimeoutReturnsCorrectValue) {
+    TimedDoor door(10);
+    EXPECT_EQ(door.getTimeOut(), 10);
+}
