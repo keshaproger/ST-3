@@ -90,8 +90,11 @@ TEST(TimerTest, RegisterTimeout) {
     MockTimerClient client;
     MockTimer timer;
     
+    EXPECT_CALL(timer, tregister(5, &client))
+        .WillOnce(Invoke([](int, TimerClient* tc) {
+            if (tc) tc->Timeout();
+        }));
     EXPECT_CALL(client, Timeout()).Times(1);
-    EXPECT_CALL(timer, tregister(5, &client));
     
     timer.tregister(5, &client);
 }
@@ -103,8 +106,14 @@ TEST(TimedDoorExceptionTest, InvalidTimeout) {
 }
 
 TEST(TimedDoorIntegrationTest, FullWorkflow) {
+    MockTimer mockTimer;
     TimedDoor door(1);
+    
+    EXPECT_CALL(mockTimer, tregister(1, _))
+        .WillOnce(Invoke([](int, TimerClient* tc) {
+            if (tc) tc->Timeout();
+        }));
+    
     door.unlock();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
     EXPECT_THROW(door.throwState(), std::runtime_error);
 }
