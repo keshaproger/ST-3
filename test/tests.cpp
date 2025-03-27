@@ -44,8 +44,8 @@ protected:
 
 class AdapterTest : public ::testing::Test {
 protected:
-    MockDoor mockDoor;
-    DoorTimerAdapter adapter{*dynamic_cast<TimedDoor*>(&mockDoor)};
+    TimedDoor realDoor{5};
+    DoorTimerAdapter adapter{realDoor};
 };
 
 // Тесты для TimedDoor
