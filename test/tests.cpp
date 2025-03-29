@@ -2,28 +2,28 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "TimedDoor.h"
 #include <thread>
 #include <chrono>
 #include <memory>
+#include "TimedDoor.h"
 
 using ::testing::_;
 using ::testing::AtLeast;
 
 class MockTimerClient : public TimerClient {
- public:
+public:
     MOCK_METHOD(void, Timeout, (), (override));
 };
 
 class MockDoor : public Door {
- public:
+public:
     MOCK_METHOD(void, lock, (), (override));
     MOCK_METHOD(void, unlock, (), (override));
     MOCK_METHOD(bool, isDoorOpened, (), (const, override));
 };
 
 class TimedDoorTest : public ::testing::Test {
- protected:
+protected:
     void SetUp() override {
         door = new TimedDoor(3);
     }
@@ -64,7 +64,7 @@ TEST_F(TimedDoorTest, InvalidTimeoutThrows) {
 
 TEST_F(TimedDoorTest, MultipleUnlockCalls) {
     door->unlock();
-    door->unlock();
+    door->unlock(); // Должно оставаться открытым
     EXPECT_TRUE(door->isDoorOpened());
 }
 
@@ -78,8 +78,10 @@ TEST(AdapterTest, AdapterCallsThrowState) {
 TEST(TimerTest, TimerRegistration) {
     auto client = std::make_shared<MockTimerClient>();
     EXPECT_CALL(*client, Timeout()).Times(1);
+    
     Timer timer;
     timer.tregister(0, client.get());
+    
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
