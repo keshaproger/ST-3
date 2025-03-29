@@ -8,13 +8,13 @@
 class TimerClient {
  public:
     virtual ~TimerClient() = default;
-    virtual void Timeout() = 0;  // Возвращаем оригинальное имя
+    virtual void Timeout() = 0;
 };
 
 class Door {
  public:
     virtual ~Door() = default;
-    virtual void lock() = 0;      // Оригинальные имена методов
+    virtual void lock() = 0;
     virtual void unlock() = 0;
     virtual bool isDoorOpened() const = 0;
 };
@@ -23,9 +23,10 @@ class TimedDoor;
 
 class DoorTimerAdapter : public TimerClient {
  private:
-    TimedDoor& doorRef;
+    const TimedDoor& doorRef;
+
  public:
-    explicit DoorTimerAdapter(TimedDoor& door);
+    explicit DoorTimerAdapter(const TimedDoor& door);
     void Timeout() override;
 };
 
@@ -33,10 +34,10 @@ class TimedDoor : public Door {
  public:
     explicit TimedDoor(int timeoutSec);
     ~TimedDoor() override;
-    void lock() override;         // Оригинальные имена
+    void lock() override;
     void unlock() override;
     bool isDoorOpened() const override;
-    void throwState();
+    void throwState() const;
     int getTimeout() const { return timeout; }
  private:
     int timeout;
@@ -47,7 +48,7 @@ class TimedDoor : public Door {
 
 class Timer {
  public:
-    void tregister(int duration, TimerClient* client);  // Оригинальное имя
+    void tregister(int duration, TimerClient* client);
  private:
     void sleep(int sec) const;
 };
