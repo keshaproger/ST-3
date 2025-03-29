@@ -40,7 +40,7 @@ bool TimedDoor::isDoorOpened() const {
     return isOpened;
 }
 
-void TimedDoor::throwState() {
+void TimedDoor::throwState() const {
     if (isOpened) {
         throw std::runtime_error("Door has been open for too long!");
     }
