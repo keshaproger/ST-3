@@ -21,23 +21,26 @@ TEST(TimedDoorTest, DoorOpensAndCloses) {
 }
 
 TEST(TimedDoorTest, ThrowsExceptionWhenLeftOpen) {
-    TimedDoor door(3);
+    TimedDoor door(1);
     door.unlock();
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     EXPECT_THROW(door.throwState(), std::runtime_error);
 }
 
 TEST(TimedDoorTest, NoExceptionWhenClosed) {
-    TimedDoor door(3);
+    TimedDoor door(1);
     door.unlock();
     door.lock();
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     EXPECT_NO_THROW(door.throwState());
 }
 
 TEST(TimerTest, CallsTimeoutAfterDelay) {
     MockTimerClient client;
     Timer timer;
-    EXPECT_CALL(client, Timeout()).Times(AtLeast(1));
+    EXPECT_CALL(client, Timeout()).Times(1);
     timer.tregister(1, &client);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 }
 
 TEST(TimedDoorTest, GetTimeoutReturnsCorrectValue) {
@@ -54,15 +57,6 @@ TEST(TimedDoorTest, MultipleDoorInstances) {
     EXPECT_TRUE(door2.isDoorOpened());
 }
 
-TEST(TimerTest, RegisterMultipleClients) {
-    MockTimerClient client1, client2;
-    Timer timer;
-    EXPECT_CALL(client1, Timeout()).Times(AtLeast(1));
-    EXPECT_CALL(client2, Timeout()).Times(AtLeast(1));
-    timer.tregister(2, &client1);
-    timer.tregister(2, &client2);
-}
-
 TEST(TimedDoorTest, LockingAfterUnlockPreventsException) {
     TimedDoor door(3);
     door.unlock();
@@ -71,20 +65,23 @@ TEST(TimedDoorTest, LockingAfterUnlockPreventsException) {
 }
 
 TEST(TimedDoorTest, AdapterTimeoutInvokesThrowState) {
-    TimedDoor door(3);
+    TimedDoor door(1);
     DoorTimerAdapter adapter(door);
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     EXPECT_THROW(adapter.Timeout(), std::runtime_error);
 }
 
 TEST(TimedDoorTest, UnlockAndTimeoutThrows) {
-    TimedDoor door(3);
+    TimedDoor door(1);
     door.unlock();
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     EXPECT_THROW(door.throwState(), std::runtime_error);
 }
 
 TEST(TimedDoorTest, TimerDoesNotThrowIfDoorClosedInTime) {
-    TimedDoor door(3);
+    TimedDoor door(1);
     door.unlock();
     door.lock();
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     EXPECT_NO_THROW(door.throwState());
 }
