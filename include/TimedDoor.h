@@ -8,48 +8,48 @@
 class TimerClient {
 public:
     virtual ~TimerClient() = default;
-    virtual void OnTimeout() = 0;  // Переименован метод
+    virtual void Timeout() = 0;  // Возвращаем оригинальное имя
 };
 
 class Door {
 public:
     virtual ~Door() = default;
-    virtual void Close() = 0;      // Изменены названия методов
-    virtual void Open() = 0;
-    virtual bool IsOpen() const = 0;
+    virtual void lock() = 0;      // Оригинальные имена методов
+    virtual void unlock() = 0;
+    virtual bool isDoorOpened() const = 0;
 };
 
-class TimedDoor; // Предварительное объявление
+class TimedDoor; 
 
-class TimerAdapter : public TimerClient {  // Изменено имя класса
+class DoorTimerAdapter : public TimerClient {  
 private:
     TimedDoor& doorRef;
 public:
-    explicit TimerAdapter(TimedDoor& door);
-    void OnTimeout() override;     // Используем новое имя метода
+    explicit DoorTimerAdapter(TimedDoor& door);
+    void Timeout() override;     
 };
 
 class TimedDoor : public Door {
 public:
     explicit TimedDoor(int timeoutSec);
     ~TimedDoor() override;
-    void Close() override;
-    void Open() override;
-    bool IsOpen() const override;
-    void CheckState();            // Переименован метод
-    int GetTimeout() const { return timeout; }
+    void lock() override;         // Оригинальные имена
+    void unlock() override;
+    bool isDoorOpened() const override;
+    void throwState();            
+    int getTimeout() const { return timeout; }
 private:
     int timeout;
-    bool isOpen;
-    TimerAdapter* adapter;
-    friend class TimerAdapter;     // Добавлена дружественная связь
+    bool isOpened;
+    DoorTimerAdapter* adapter;
+    friend class DoorTimerAdapter;     
 };
 
 class Timer {
 public:
-    void SetTimer(int duration, TimerClient* client);  // Изменено название метода
+    void tregister(int duration, TimerClient* client);  // Оригинальное имя
 private:
-    void Wait(int sec) const;
+    void sleep(int sec) const;
 };
 
 #endif  // INCLUDE_TIMEDDOOR_H_
