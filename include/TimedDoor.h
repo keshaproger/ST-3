@@ -3,51 +3,52 @@
 #define INCLUDE_TIMEDDOOR_H_
 
 #include <stdexcept>
-#include <thread>
-#include <chrono>
 
-class TimerClient {
+class TimerSubscriber {
  public:
-  virtual void Timeout() = 0;
+  virtual void OnTimerExpired() = 0;
+  virtual ~TimerSubscriber() = default;
 };
 
-class Door {
+class SmartDoor {
  public:
-  virtual void lock() = 0;
-  virtual void unlock() = 0;
-  virtual bool isDoorOpened() = 0;
+  virtual void Secure() = 0;
+  virtual void Release() = 0;
+  virtual bool CheckStatus() const = 0;
+  virtual ~SmartDoor() = default;
 };
 
-class TimedDoor;
+class TimerHandler;
 
-class DoorTimerAdapter : public TimerClient {
+class TimedSmartDoor : public SmartDoor {
+ public:
+  explicit TimedSmartDoor(unsigned int duration);
+  ~TimedSmartDoor() override;
+  void Release() override;
+  void Secure() override;
+  bool CheckStatus() const override;
+  void TriggerSecurityCheck();
+  unsigned int GetDuration() const { return timeout_duration; }
+
  private:
-  TimedDoor& door;
- public:
-  explicit DoorTimerAdapter(TimedDoor&);
-  void Timeout() override;
+  TimerHandler* timer_handler;
+  bool door_open;
+  unsigned int timeout_duration;
 };
 
-class TimedDoor : public Door {
+class TimerHandler : public TimerSubscriber {
+ public:
+  explicit TimerHandler(TimedSmartDoor& door);
+  void OnTimerExpired() override;
+
  private:
-  DoorTimerAdapter * adapter;
-  int iTimeout;
-  bool isOpened;
- public:
-  explicit TimedDoor(int);
-  ~TimedDoor();
-  bool isDoorOpened() override;
-  void unlock() override;
-  void lock() override;
-  int  getTimeOut() const;
-  void throwState();
+  TimedSmartDoor& linked_door;
 };
 
-class Timer {
-  TimerClient *client;
-  void sleep(int);
+class TimerScheduler {
  public:
-  void tregister(int, TimerClient*);
+  void ScheduleTimer(unsigned int delay, TimerSubscriber* subscriber);
+  virtual ~TimerScheduler() = default;
 };
 
 #endif  // INCLUDE_TIMEDDOOR_H_
