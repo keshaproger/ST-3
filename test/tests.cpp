@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <thread>
 #include <chrono>
+#include <memory>
 #include "TimedDoor.h"
 
 using ::testing::_;
@@ -75,11 +76,13 @@ TEST(AdapterTest, AdapterCallsThrowState) {
 }
 
 TEST(TimerTest, TimerRegistration) {
-    MockTimerClient client;
-    EXPECT_CALL(client, Timeout()).Times(1);
+    auto client = std::make_shared<MockTimerClient>();
+    EXPECT_CALL(*client, Timeout()).Times(1);
     
     Timer timer;
-    timer.tregister(0, &client);
+    timer.tregister(0, client.get());
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 TEST(IntegrationTest, FullTimeoutCycle) {
