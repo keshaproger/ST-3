@@ -23,7 +23,7 @@ class TimedDoor;
 
 class DoorTimerAdapter : public TimerClient {
  private:
-    TimedDoor& doorRef;
+    const TimedDoor& doorRef;
 
  public:
     explicit DoorTimerAdapter(const TimedDoor& door);
