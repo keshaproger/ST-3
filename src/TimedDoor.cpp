@@ -5,55 +5,55 @@
 #include <thread>
 #include <iostream>
 
-TimerAdapter::TimerAdapter(TimedDoor& door) : doorRef(door) {}
+DoorTimerAdapter::DoorTimerAdapter(TimedDoor& door) : doorRef(door) {}
 
-void TimerAdapter::OnTimeout() {
-    if (doorRef.IsOpen()) {
-        doorRef.CheckState();
+void DoorTimerAdapter::Timeout() {
+    if (doorRef.isDoorOpened()) {
+        doorRef.throwState();
     }
 }
 
-TimedDoor::TimedDoor(int timeoutSec) : isOpen(false), timeout(timeoutSec) {
+TimedDoor::TimedDoor(int timeoutSec) : isOpened(false), timeout(timeoutSec) {
     if (timeoutSec <= 0) {
         throw std::invalid_argument("Timeout must be positive");
     }
-    adapter = new TimerAdapter(*this);
+    adapter = new DoorTimerAdapter(*this);
 }
 
 TimedDoor::~TimedDoor() {
     delete adapter;
 }
 
-void TimedDoor::Open() {
-    if (!isOpen) {
-        isOpen = true;
+void TimedDoor::unlock() {
+    if (!isOpened) {
+        isOpened = true;
         Timer timer;
-        timer.SetTimer(timeout, adapter);
+        timer.tregister(timeout, adapter);
     }
 }
 
-void TimedDoor::Close() {
-    isOpen = false;
+void TimedDoor::lock() {
+    isOpened = false;
 }
 
-bool TimedDoor::IsOpen() const {
-    return isOpen;
+bool TimedDoor::isDoorOpened() const {
+    return isOpened;
 }
 
-void TimedDoor::CheckState() {
-    if (isOpen) {
-        throw std::logic_error("Door remained open beyond allowed time");
+void TimedDoor::throwState() {
+    if (isOpened) {
+        throw std::runtime_error("Door has been open for too long!");
     }
 }
 
-void Timer::SetTimer(int duration, TimerClient* client) {
+void Timer::tregister(int duration, TimerClient* client) {
     std::thread([duration, client]() {
         if (duration > 0) {
             std::this_thread::sleep_for(std::chrono::seconds(duration));
         }
         if (client) {
             try {
-                client->OnTimeout();
+                client->Timeout();
             } catch (const std::exception& e) {
                 std::cerr << "Timer error: " << e.what() << '\n';
             }
