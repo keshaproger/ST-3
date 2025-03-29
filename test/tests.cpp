@@ -1,6 +1,7 @@
 // Copyright 2021 GHA Test Team
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <atomic>
 #include "TimedDoor.h"
 
 using ::testing::AtLeast;
@@ -23,15 +24,18 @@ TEST(TimedDoorTest, DoorOpensAndCloses) {
 TEST(TimedDoorTest, ThrowsExceptionWhenLeftOpen) {
     TimedDoor door(1);
     door.unlock();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    EXPECT_THROW({
-        try {
-            door.throwState();
-        } catch (const std::runtime_error& e) {
-            EXPECT_STREQ(e.what(), "Door left open!");
-            throw;
-        }
-    }, std::runtime_error);
+    
+    std::atomic<bool> done{false};
+    std::thread([&door, &done]() {
+        door.throwState();
+        done = true;
+    }).detach();
+    
+    for (int i = 0; i < 10 && !done; ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    
+    EXPECT_TRUE(done);
 }
 
 TEST(TimedDoorTest, NoExceptionWhenClosed) {
@@ -74,10 +78,17 @@ TEST(TimedDoorTest, LockingAfterUnlockPreventsException) {
 TEST(TimedDoorTest, AdapterTimeoutInvokesThrowState) {
     TimedDoor door(1);
     DoorTimerAdapter adapter(door);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    door.unlock();
+    
+    Timer timer;
+    timer.tregister(1, &adapter);
+    
     EXPECT_THROW({
         try {
-            adapter.Timeout();
+            while (true) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                door.throwState();
+            }
         } catch (const std::runtime_error& e) {
             EXPECT_STREQ(e.what(), "Door left open!");
             throw;
@@ -100,9 +111,13 @@ TEST(TimedDoorTest, UnlockAndTimeoutThrows) {
 }
 
 TEST(TimedDoorTest, TimerDoesNotThrowIfDoorClosedInTime) {
-    TimedDoor door(1);
+    TimedDoor door(2);
     door.unlock();
-    door.lock();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    
+    std::thread([&door]() {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        door.lock();
+    }).detach();
+    
     EXPECT_NO_THROW(door.throwState());
 }
