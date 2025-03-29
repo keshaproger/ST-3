@@ -5,7 +5,7 @@
 #include <thread>
 #include <iostream>
 
-DoorTimerAdapter::DoorTimerAdapter(TimedDoor& door) : doorRef(door) {}
+DoorTimerAdapter::DoorTimerAdapter(const TimedDoor& door) : doorRef(door) {}
 
 void DoorTimerAdapter::Timeout() {
     if (doorRef.isDoorOpened()) {
