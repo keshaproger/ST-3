@@ -1,51 +1,61 @@
 // Copyright 2021 GHA Test Team
 #include "TimedDoor.h"
+#include <chrono>
+#include <thread>
+#include <memory>
+#include <iostream>
 
-DoorTimerAdapter::DoorTimerAdapter(TimedDoor& d) : door(d) {}
-void DoorTimerAdapter::Timeout() {
-    door.throwState();
+TimerHandler::TimerHandler(TimedSmartDoor& door) : linked_door(door) {}
+
+void TimerHandler::OnTimerExpired() {
+  if (linked_door.CheckStatus()) {
+    linked_door.TriggerSecurityCheck();
+  }
 }
 
-TimedDoor::TimedDoor(int timeout) : iTimeout(timeout), isOpened(false) {
-    adapter = new DoorTimerAdapter(*this);
+TimedSmartDoor::TimedSmartDoor(unsigned int duration) 
+  : door_open(false), timeout_duration(duration) {
+  if (duration == 0) throw std::invalid_argument("Invalid timer configuration");
+  timer_handler = new TimerHandler(*this);
 }
 
-TimedDoor::~TimedDoor() {
-    delete adapter;
+TimedSmartDoor::~TimedSmartDoor() {
+  delete timer_handler;
 }
 
-bool TimedDoor::isDoorOpened() {
-    return isOpened;
+void TimedSmartDoor::Release() {
+  door_open = true;
+  auto scheduler = std::make_unique<TimerScheduler>();
+  scheduler->ScheduleTimer(timeout_duration, timer_handler);
 }
 
-void TimedDoor::unlock() {
-    isOpened = true;
-    Timer timer;
-    timer.tregister(iTimeout, adapter);
+void TimedSmartDoor::Secure() {
+  door_open = false;
 }
 
-void TimedDoor::lock() {
-    isOpened = false;
+bool TimedSmartDoor::CheckStatus() const {
+  return door_open;
 }
 
-int TimedDoor::getTimeOut() const {
-    return iTimeout;
+void TimedSmartDoor::TriggerSecurityCheck() {
+  if (door_open) {
+    door_open = false;
+    throw std::logic_error("Security breach detected!");
+  }
 }
 
-void TimedDoor::throwState() {
-    if (isOpened) {
-        isOpened = false;
-        throw std::runtime_error("Door left open!");
+void TimerScheduler::ScheduleTimer(unsigned int delay, TimerSubscriber* sub) {
+  std::thread([delay, sub]() {
+    if (delay > 0) {
+      std::this_thread::sleep_for(std::chrono::seconds(delay));
     }
-}
-
-void Timer::sleep(int seconds) {
-    std::this_thread::sleep_for(std::chrono::seconds(seconds));
-}
-
-void Timer::tregister(int seconds, TimerClient* client) {
-    std::thread([seconds, client]() {
-        std::this_thread::sleep_for(std::chrono::seconds(seconds));
-        client->Timeout();
-    }).detach();
+    
+    if (sub) {
+      try {
+        sub->OnTimerExpired();
+      } catch (const std::exception& e) {
+        std::cerr << "Timer error: " << e.what() << '\n';
+      }
+    }
+  }).detach();
 }
