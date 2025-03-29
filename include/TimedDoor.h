@@ -6,49 +6,52 @@
 #include <exception>
 
 class TimerClient {
-public:
+ public:
     virtual ~TimerClient() = default;
-    virtual void Timeout() = 0;  // Возвращаем оригинальное имя
+    virtual void Timeout() = 0;
 };
 
 class Door {
-public:
+ public:
     virtual ~Door() = default;
-    virtual void lock() = 0;      // Оригинальные имена методов
+    virtual void lock() = 0;
     virtual void unlock() = 0;
     virtual bool isDoorOpened() const = 0;
 };
 
-class TimedDoor; 
+class TimedDoor;
 
-class DoorTimerAdapter : public TimerClient {  
-private:
-    TimedDoor& doorRef;
-public:
-    explicit DoorTimerAdapter(TimedDoor& door);
-    void Timeout() override;     
+class DoorTimerAdapter : public TimerClient {
+ private:
+    const TimedDoor& doorRef;
+
+ public:
+    explicit DoorTimerAdapter(const TimedDoor& door);
+    void Timeout() override;
 };
 
 class TimedDoor : public Door {
-public:
+ public:
     explicit TimedDoor(int timeoutSec);
     ~TimedDoor() override;
-    void lock() override;         // Оригинальные имена
+    void lock() override;
     void unlock() override;
     bool isDoorOpened() const override;
-    void throwState();            
+    void throwState();
     int getTimeout() const { return timeout; }
-private:
+
+ private:
     int timeout;
     bool isOpened;
     DoorTimerAdapter* adapter;
-    friend class DoorTimerAdapter;     
+    friend class DoorTimerAdapter;
 };
 
 class Timer {
-public:
-    void tregister(int duration, TimerClient* client);  // Оригинальное имя
-private:
+ public:
+    void tregister(int duration, TimerClient* client);
+
+ private:
     void sleep(int sec) const;
 };
 
