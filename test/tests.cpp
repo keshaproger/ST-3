@@ -24,7 +24,14 @@ TEST(TimedDoorTest, ThrowsExceptionWhenLeftOpen) {
     TimedDoor door(1);
     door.unlock();
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    EXPECT_THROW(door.throwState(), std::runtime_error);
+    EXPECT_THROW({
+        try {
+            door.throwState();
+        } catch (const std::runtime_error& e) {
+            EXPECT_STREQ(e.what(), "Door left open!");
+            throw;
+        }
+    }, std::runtime_error);
 }
 
 TEST(TimedDoorTest, NoExceptionWhenClosed) {
@@ -68,14 +75,28 @@ TEST(TimedDoorTest, AdapterTimeoutInvokesThrowState) {
     TimedDoor door(1);
     DoorTimerAdapter adapter(door);
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    EXPECT_THROW(adapter.Timeout(), std::runtime_error);
+    EXPECT_THROW({
+        try {
+            adapter.Timeout();
+        } catch (const std::runtime_error& e) {
+            EXPECT_STREQ(e.what(), "Door left open!");
+            throw;
+        }
+    }, std::runtime_error);
 }
 
 TEST(TimedDoorTest, UnlockAndTimeoutThrows) {
     TimedDoor door(1);
     door.unlock();
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    EXPECT_THROW(door.throwState(), std::runtime_error);
+    EXPECT_THROW({
+        try {
+            door.throwState();
+        } catch (const std::runtime_error& e) {
+            EXPECT_STREQ(e.what(), "Door left open!");
+            throw;
+        }
+    }, std::runtime_error);
 }
 
 TEST(TimedDoorTest, TimerDoesNotThrowIfDoorClosedInTime) {
