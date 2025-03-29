@@ -46,6 +46,10 @@ void Timer::sleep(int seconds) {
 void Timer::tregister(int seconds, TimerClient* client) {
     std::thread([seconds, client]() {
         std::this_thread::sleep_for(std::chrono::seconds(seconds));
-        client->Timeout();
+        try {
+            client->Timeout();
+        } catch (...) {
+            // Предотвращаем аварийное завершение
+        }
     }).detach();
 }
