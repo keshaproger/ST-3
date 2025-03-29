@@ -1,123 +1,79 @@
 // Copyright 2021 GHA Test Team
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 #include "TimedDoor.h"
 
+using ::testing::_;
 using ::testing::AtLeast;
-using ::testing::Return;
 
-class MockTimerClient : public TimerClient {
-public:
-    MOCK_METHOD(void, Timeout, (), (override));
+class MockTimerSubscriber : public TimerSubscriber {
+ public:
+  MOCK_METHOD(void, OnTimerExpired, (), (override));
 };
 
-TEST(TimedDoorTest, DoorOpensAndCloses) {
-    TimedDoor door(3);
-    EXPECT_FALSE(door.isDoorOpened());
-    door.unlock();
-    EXPECT_TRUE(door.isDoorOpened());
-    door.lock();
-    EXPECT_FALSE(door.isDoorOpened());
+class SecurityTest : public ::testing::Test {
+ protected:
+  void SetUp() override { door = new TimedSmartDoor(3); }
+  void TearDown() override { delete door; }
+  
+  TimedSmartDoor* door;
+};
+
+TEST_F(SecurityTest, DefaultSecurityState) {
+  EXPECT_FALSE(door->CheckStatus());
+  EXPECT_EQ(door->GetDuration(), 3);
 }
 
-TEST(TimedDoorTest, ThrowsExceptionWhenLeftOpen) {
-    TimedDoor door(1);
-    door.unlock();
-    
-    std::atomic<bool> done{false};
-    std::thread([&door, &done]() {
-        door.throwState();
-        done = true;
-    }).detach();
-    
-    for (int i = 0; i < 10 && !done; ++i) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-    
-    EXPECT_TRUE(done);
+TEST_F(SecurityTest, DoorActivationSequence) {
+  door->Secure();
+  door->Release();
+  EXPECT_TRUE(door->CheckStatus());
 }
 
-TEST(TimedDoorTest, NoExceptionWhenClosed) {
-    TimedDoor door(1);
-    door.unlock();
-    door.lock();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    EXPECT_NO_THROW(door.throwState());
+TEST_F(SecurityTest, EmergencyLockProcedure) {
+  door->Release();
+  door->Secure();
+  EXPECT_FALSE(door->CheckStatus());
 }
 
-TEST(TimerTest, CallsTimeoutAfterDelay) {
-    MockTimerClient client;
-    Timer timer;
-    EXPECT_CALL(client, Timeout()).Times(1);
-    timer.tregister(1, &client);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+TEST_F(SecurityTest, SecurityBreachScenario) {
+  door->Release();
+  EXPECT_THROW(door->TriggerSecurityCheck(), std::logic_error);
 }
 
-TEST(TimedDoorTest, GetTimeoutReturnsCorrectValue) {
-    TimedDoor door(5);
-    EXPECT_EQ(door.getTimeOut(), 5);
+TEST_F(SecurityTest, ConsecutiveAccessAttempts) {
+  door->Release();
+  door->Release();
+  EXPECT_TRUE(door->CheckStatus());
 }
 
-TEST(TimedDoorTest, MultipleDoorInstances) {
-    TimedDoor door1(3);
-    TimedDoor door2(5);
-    door1.unlock();
-    door2.unlock();
-    EXPECT_TRUE(door1.isDoorOpened());
-    EXPECT_TRUE(door2.isDoorOpened());
+TEST_F(SecurityTest, InvalidTimerConfiguration) {
+  EXPECT_THROW(TimedSmartDoor invalid_door(0), std::invalid_argument);
 }
 
-TEST(TimedDoorTest, LockingAfterUnlockPreventsException) {
-    TimedDoor door(3);
-    door.unlock();
-    door.lock();
-    EXPECT_NO_THROW(door.throwState());
+TEST_F(SecurityTest, PostLockInspection) {
+  door->Secure();
+  EXPECT_NO_THROW(door->TriggerSecurityCheck());
 }
 
-TEST(TimedDoorTest, AdapterTimeoutInvokesThrowState) {
-    TimedDoor door(1);
-    DoorTimerAdapter adapter(door);
-    door.unlock();
-    
-    Timer timer;
-    timer.tregister(1, &adapter);
-    
-    EXPECT_THROW({
-        try {
-            while (true) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                door.throwState();
-            }
-        } catch (const std::runtime_error& e) {
-            EXPECT_STREQ(e.what(), "Door left open!");
-            throw;
-        }
-    }, std::runtime_error);
+TEST(TimerIntegrationTest, SubscriberNotification) {
+  MockTimerSubscriber mock_sub;
+  TimerScheduler scheduler;
+
+  EXPECT_CALL(mock_sub, OnTimerExpired()).Times(1);
+  scheduler.ScheduleTimer(0, &mock_sub);
 }
 
-TEST(TimedDoorTest, UnlockAndTimeoutThrows) {
-    TimedDoor door(1);
-    door.unlock();
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    EXPECT_THROW({
-        try {
-            door.throwState();
-        } catch (const std::runtime_error& e) {
-            EXPECT_STREQ(e.what(), "Door left open!");
-            throw;
-        }
-    }, std::runtime_error);
+TEST(HandlerTest, ClosedDoorNoAlert) {
+  TimedSmartDoor test_door(2);
+  test_door.Secure();
+  EXPECT_NO_THROW(test_door.TriggerSecurityCheck());
 }
 
-TEST(TimedDoorTest, TimerDoesNotThrowIfDoorClosedInTime) {
-    TimedDoor door(2);
-    door.unlock();
-    
-    std::thread([&door]() {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        door.lock();
-    }).detach();
-    
-    EXPECT_NO_THROW(door.throwState());
+TEST(HandlerTest, ImmediateTimeoutResponse) {
+  TimedSmartDoor test_door(1);
+  test_door.Release();
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  EXPECT_THROW(test_door.TriggerSecurityCheck(), std::logic_error);
 }
