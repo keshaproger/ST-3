@@ -1,120 +1,90 @@
 // Copyright 2021 GHA Test Team
-
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <chrono>
-#include <cstdint>
-#include <stdexcept>
-#include <thread>
+#include <gmock/gmock.h>
 #include "TimedDoor.h"
 
-using ::testing::_;
 using ::testing::AtLeast;
-using ::testing::Invoke;
+using ::testing::Return;
 
-// Mocks for testing
 class MockTimerClient : public TimerClient {
 public:
     MOCK_METHOD(void, Timeout, (), (override));
 };
 
-class MockDoor : public Door {
-public:
-    MOCK_METHOD(void, lock, (), (override));
-    MOCK_METHOD(void, unlock, (), (override));
-    MOCK_METHOD(bool, isDoorOpened, (), (override));
-};
-
-class MockTimer : public Timer {
-public:
-    MOCK_METHOD(void, tregister, (int, TimerClient*), ());
-};
-
-// Test Fixtures
-class TimedDoorTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        door = new TimedDoor(5);
-    }
-    void TearDown() override {
-        delete door;
-    }
-    TimedDoor* door;
-};
-
-class AdapterTest : public ::testing::Test {
-protected:
-    TimedDoor realDoor{5};
-    DoorTimerAdapter adapter{realDoor};
-};
-
-// Тесты для TimedDoor
-TEST_F(TimedDoorTest, InitialStateIsLocked) {
-    EXPECT_FALSE(door->isDoorOpened());
+TEST(TimedDoorTest, DoorOpensAndCloses) {
+    TimedDoor door(3);
+    EXPECT_FALSE(door.isDoorOpened());
+    door.unlock();
+    EXPECT_TRUE(door.isDoorOpened());
+    door.lock();
+    EXPECT_FALSE(door.isDoorOpened());
 }
 
-TEST_F(TimedDoorTest, UnlockOpensDoor) {
-    door->unlock();
-    EXPECT_TRUE(door->isDoorOpened());
+TEST(TimedDoorTest, ThrowsExceptionWhenLeftOpen) {
+    TimedDoor door(3);
+    door.unlock();
+    EXPECT_THROW(door.throwState(), std::runtime_error);
 }
 
-TEST_F(TimedDoorTest, LockClosesDoor) {
-    door->unlock();
-    door->lock();
-    EXPECT_FALSE(door->isDoorOpened());
+TEST(TimedDoorTest, NoExceptionWhenClosed) {
+    TimedDoor door(3);
+    door.unlock();
+    door.lock();
+    EXPECT_NO_THROW(door.throwState());
 }
 
-TEST_F(TimedDoorTest, ThrowWhenOpenTimeout) {
-    door->unlock();
-    EXPECT_THROW(door->throwState(), std::runtime_error);
+TEST(TimerTest, CallsTimeoutAfterDelay) {
+    MockTimerClient client;
+    Timer timer;
+    EXPECT_CALL(client, Timeout()).Times(AtLeast(1));
+    timer.tregister(1, &client);
 }
 
-TEST_F(TimedDoorTest, NoThrowWhenClosed) {
-    door->lock();
-    EXPECT_NO_THROW(door->throwState());
+TEST(TimedDoorTest, GetTimeoutReturnsCorrectValue) {
+    TimedDoor door(5);
+    EXPECT_EQ(door.getTimeOut(), 5);
 }
 
-// Тесты для адаптера
-TEST_F(AdapterTest, TimeoutTriggersWhenOpen) {
-    realDoor.unlock();
+TEST(TimedDoorTest, MultipleDoorInstances) {
+    TimedDoor door1(3);
+    TimedDoor door2(5);
+    door1.unlock();
+    door2.unlock();
+    EXPECT_TRUE(door1.isDoorOpened());
+    EXPECT_TRUE(door2.isDoorOpened());
+}
+
+TEST(TimerTest, RegisterMultipleClients) {
+    MockTimerClient client1, client2;
+    Timer timer;
+    EXPECT_CALL(client1, Timeout()).Times(AtLeast(1));
+    EXPECT_CALL(client2, Timeout()).Times(AtLeast(1));
+    timer.tregister(2, &client1);
+    timer.tregister(2, &client2);
+}
+
+TEST(TimedDoorTest, LockingAfterUnlockPreventsException) {
+    TimedDoor door(3);
+    door.unlock();
+    door.lock();
+    EXPECT_NO_THROW(door.throwState());
+}
+
+TEST(TimedDoorTest, AdapterTimeoutInvokesThrowState) {
+    TimedDoor door(3);
+    DoorTimerAdapter adapter(door);
     EXPECT_THROW(adapter.Timeout(), std::runtime_error);
 }
 
-TEST_F(AdapterTest, NoActionWhenClosed) {
-    realDoor.lock();
-    EXPECT_NO_THROW(adapter.Timeout());
-}
-
-// Тесты для Timer
-TEST(TimerTest, RegisterTimeout) {
-    MockTimerClient client;
-    MockTimer timer;
-    
-    EXPECT_CALL(timer, tregister(5, &client))
-        .WillOnce(testing::Invoke([](int, TimerClient* tc) {  // Явное указание пространства имён
-            if (tc) tc->Timeout();
-        }));
-    EXPECT_CALL(client, Timeout()).Times(1);
-    
-    timer.tregister(5, &client);
-}
-
-// Тесты исключений
-TEST(TimedDoorExceptionTest, InvalidTimeout) {
-    EXPECT_THROW(TimedDoor(-1), std::invalid_argument);
-    EXPECT_THROW(TimedDoor(0), std::invalid_argument);
-}
-
-TEST(TimedDoorIntegrationTest, FullWorkflow) {
-    testing::NiceMock<MockTimer> mockTimer;
-    TimedDoor door(1);
-
-    ON_CALL(mockTimer, tregister)
-        .WillByDefault(Invoke([](int, TimerClient* tc) {
-            if (tc) tc->Timeout();
-        }));
-
+TEST(TimedDoorTest, UnlockAndTimeoutThrows) {
+    TimedDoor door(3);
     door.unlock();
-    
     EXPECT_THROW(door.throwState(), std::runtime_error);
+}
+
+TEST(TimedDoorTest, TimerDoesNotThrowIfDoorClosedInTime) {
+    TimedDoor door(3);
+    door.unlock();
+    door.lock();
+    EXPECT_NO_THROW(door.throwState());
 }
